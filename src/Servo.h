@@ -98,6 +98,7 @@ typedef struct  {
 typedef struct {
   ServoPin_t Pin;
   volatile unsigned int ticks;
+  unsigned long duration;
 } servo_t;
 
 class Servo
@@ -107,8 +108,8 @@ public:
   uint8_t attach(int pin);           // attach the given pin to the next free channel, sets pinMode, returns channel number or 0 if failure
   uint8_t attach(int pin, int min, int max); // as above but also sets min and max values for writes.
   void detach();
-  void write(int value);             // if value is < the minimum pulse width it's treated as an angle, otherwise as pulse width in microseconds
-  void writeMicroseconds(int value); // Write pulse width in microseconds
+  void write(int value, unsigned long duration = 0); // if value is < the minimum pulse width it's treated as an angle, otherwise as pulse width in microseconds
+  void writeMicroseconds(int value, unsigned long duration = 0); // Write pulse width in microseconds
   int read();                        // returns current pulse width as an angle between 0 and 180 degrees
   int readMicroseconds();            // returns current pulse width in microseconds for this servo (was read_us() in first release)
   bool attached();                   // return true if this servo is attached, otherwise false
