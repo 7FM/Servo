@@ -27,17 +27,17 @@
 #include <avr/io.h>
 
 //#define USE_TIMERB1        // interferes with PWM on pin 3
-#define USE_TIMERB2        // interferes with PWM on pin 11
+#define USE_TIMERB2 // interferes with PWM on pin 11
 //#define USE_TIMERB0        // interferes with PWM on pin 6
 
 #if !defined(USE_TIMERB1) && !defined(USE_TIMERB2) && !defined(USE_TIMERB0)
-    # error "No timers allowed for Servo"
-    /* Please uncomment a timer above and rebuild */
+#error "No timers allowed for Servo"
+/* Please uncomment a timer above and rebuild */
 #endif
 
-static volatile TCB_t* _timer =
+static volatile TCB_t *_timer =
 #if defined(USE_TIMERB0)
-&TCB0;
+    &TCB0;
 #endif
 #if defined(USE_TIMERB1)
 &TCB1;
@@ -48,7 +48,7 @@ static volatile TCB_t* _timer =
 
 typedef enum {
     timer0,
-    _Nbr_16timers } timer16_Sequence_t;
+    _Nbr_16timers
+} timer16_Sequence_t;
 
-
-#endif  /* __SERVO_TIMERS_H__ */
+#endif /* __SERVO_TIMERS_H__ */
