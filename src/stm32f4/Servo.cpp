@@ -30,8 +30,8 @@
 
 #include "boards.h"
 #include "io.h"
-#include "pwm.h"
 #include "math.h"
+#include "pwm.h"
 
 // 20 millisecond period config.  For a 1-based prescaler,
 //
@@ -39,31 +39,29 @@
 // => prescaler * overflow = 20 * CYC_MSEC
 //
 // This picks the smallest prescaler that allows an overflow < 2^16.
-#define MAX_OVERFLOW    ((1 << 16) - 1)
-#define CYC_MSEC        (1000 * CYCLES_PER_MICROSECOND)
-#define TAU_MSEC        20
-#define TAU_USEC        (TAU_MSEC * 1000)
-#define TAU_CYC         (TAU_MSEC * CYC_MSEC)
+#define MAX_OVERFLOW ((1 << 16) - 1)
+#define CYC_MSEC (1000 * CYCLES_PER_MICROSECOND)
+#define TAU_MSEC 20
+#define TAU_USEC (TAU_MSEC * 1000)
+#define TAU_CYC (TAU_MSEC * CYC_MSEC)
 #define SERVO_PRESCALER (TAU_CYC / MAX_OVERFLOW + 1)
-#define SERVO_OVERFLOW  ((uint16)round((double)TAU_CYC / SERVO_PRESCALER))
+#define SERVO_OVERFLOW ((uint16)round((double)TAU_CYC / SERVO_PRESCALER))
 
 // Unit conversions
 #define US_TO_COMPARE(us) ((uint16)map((us), 0, TAU_USEC, 0, SERVO_OVERFLOW))
-#define COMPARE_TO_US(c)  ((uint32)map((c), 0, SERVO_OVERFLOW, 0, TAU_USEC))
-#define ANGLE_TO_US(a)    ((uint16)(map((a), this->minAngle, this->maxAngle, \
-                                        this->minPW, this->maxPW)))
-#define US_TO_ANGLE(us)   ((int16)(map((us), this->minPW, this->maxPW,  \
-                                       this->minAngle, this->maxAngle)))
+#define COMPARE_TO_US(c) ((uint32)map((c), 0, SERVO_OVERFLOW, 0, TAU_USEC))
+#define ANGLE_TO_US(a) ((uint16)(map((a), this->minAngle, this->maxAngle, \
+                                     this->minPW, this->maxPW)))
+#define US_TO_ANGLE(us) ((int16)(map((us), this->minPW, this->maxPW, \
+                                     this->minAngle, this->maxAngle)))
 
 Servo::Servo() {
     this->resetFields();
 }
 
-bool Servo::attach(uint8 pin, uint16 minPW, uint16 maxPW, int16 minAngle, int16 maxAngle)
-{
+bool Servo::attach(uint8 pin, uint16 minPW, uint16 maxPW, int16 minAngle, int16 maxAngle) {
     // SerialUSB.begin(115200);
     // SerialUSB.println(MAX_OVERFLOW);
-
 
     timer_dev *tdev = PIN_MAP[pin].timer_device;
 
@@ -76,39 +74,34 @@ bool Servo::attach(uint8 pin, uint16 minPW, uint16 maxPW, int16 minAngle, int16 
 
     pinMode(pin, OUTPUT);
 
-
     if (tdev == NULL) {
         // don't reset any fields or ASSERT(0), to keep driving any
         // previously attach()ed servo.
         return false;
     }
 
-    if ( (tdev == TIMER1) || (tdev == TIMER8) || (tdev == TIMER10) || (tdev == TIMER11))
-    {
+    if ((tdev == TIMER1) || (tdev == TIMER8) || (tdev == TIMER10) || (tdev == TIMER11)) {
         prescaler = 54;
         overflow = 65400;
         minPW_correction = 40;
         maxPW_correction = 50;
     }
 
-    if ( (tdev == TIMER2) || (tdev == TIMER3) || (tdev == TIMER4) || (tdev == TIMER5) )
-    {
+    if ((tdev == TIMER2) || (tdev == TIMER3) || (tdev == TIMER4) || (tdev == TIMER5)) {
         prescaler = 6;
         overflow = 64285;
         minPW_correction = 370;
         maxPW_correction = 350;
     }
 
-    if ( (tdev == TIMER6) || (tdev == TIMER7) )
-    {
+    if ((tdev == TIMER6) || (tdev == TIMER7)) {
         prescaler = 6;
         overflow = 65400;
         minPW_correction = 0;
         maxPW_correction = 0;
     }
 
-    if ( (tdev == TIMER9) || (tdev == TIMER12) || (tdev == TIMER13) || (tdev == TIMER14) )
-    {
+    if ((tdev == TIMER9) || (tdev == TIMER12) || (tdev == TIMER13) || (tdev == TIMER14)) {
         prescaler = 6;
         overflow = 65400;
         minPW_correction = 30;

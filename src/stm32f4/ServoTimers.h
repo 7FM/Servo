@@ -24,17 +24,17 @@
  * SOFTWARE.
  *****************************************************************************/
 
- /*
+/*
  * Arduino srl - www.arduino.org
  * 2017 Feb 23: Edited by Francesco Alessi (alfran) - francesco@arduino.org
  */
 #ifndef _SERVO_H_
 #define _SERVO_H_
 
-#include "types.h"
 #include "timer.h"
+#include "types.h"
 
-#include "wiring.h"             /* hack for IDE compile */
+#include "wiring.h" /* hack for IDE compile */
 
 /*
  * Note on Arduino compatibility:
@@ -63,24 +63,23 @@
  */
 
 // Pin number of unattached pins
-#define NOT_ATTACHED                    (-1)
+#define NOT_ATTACHED (-1)
 
-#define _Nbr_16timers 14 // Number of STM32F469 Timers
+#define _Nbr_16timers 14   // Number of STM32F469 Timers
 #define SERVOS_PER_TIMER 4 // Number of timer channels
-
 
 // Default min/max pulse widths (in microseconds) and angles (in
 // degrees).  Values chosen for Arduino compatibility.  These values
 // are part of the public API; DO NOT CHANGE THEM.
-#define MIN_ANGLE               0
-#define MAX_ANGLE             180
+#define MIN_ANGLE 0
+#define MAX_ANGLE 180
 
-#define MIN_PULSE_WIDTH      1000 // the shortest pulse (in us) sent to a servo
-#define MAX_PULSE_WIDTH      2000 // the longest pulse (in us) sent to a servo
+#define MIN_PULSE_WIDTH 1000 // the shortest pulse (in us) sent to a servo
+#define MAX_PULSE_WIDTH 2000 // the longest pulse (in us) sent to a servo
 
 /** Class for interfacing with RC servomotors. */
 class Servo {
-public:
+  public:
     /**
      * @brief Construct a new Servo instance.
      *
@@ -124,10 +123,10 @@ public:
      */
 
     bool attach(uint8 pin,
-                uint16 minPulseWidth=MIN_PULSE_WIDTH,
-                uint16 maxPulseWidth=MAX_PULSE_WIDTH,
-                int16 minAngle=MIN_ANGLE,
-                int16 maxAngle=MAX_ANGLE);
+                uint16 minPulseWidth = MIN_PULSE_WIDTH,
+                uint16 maxPulseWidth = MAX_PULSE_WIDTH,
+                int16 minAngle = MIN_ANGLE,
+                int16 maxAngle = MAX_ANGLE);
     /**
      * @brief Stop driving the servo pulse train.
      *
@@ -176,7 +175,6 @@ public:
      */
     uint16 readMicroseconds() const;
 
-
     /**
      * @brief Check if this instance is attached to a servo.
      * @return true if this instance is attached to a servo, false otherwise.
@@ -192,7 +190,7 @@ public:
      */
     int attachedPin() const { return this->pin; }
 
-private:
+  private:
     int16 pin;
     uint16 minPW;
     uint16 maxPW;
@@ -202,6 +200,4 @@ private:
     void resetFields(void);
 };
 
-
-
-#endif  /* _SERVO_H_ */
+#endif /* _SERVO_H_ */
