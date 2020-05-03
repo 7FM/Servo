@@ -93,7 +93,7 @@ SIGNAL(TIMER5_COMPA_vect) {
 }
 #endif
 
-#elif defined WIRING
+#elif defined(WIRING)
 // Interrupt handlers for Wiring
 #if defined(_useTimer1)
 void Timer1Service() {
@@ -168,32 +168,73 @@ static void initISR(timer16_Sequence_t timer) {
 
 static void finISR(timer16_Sequence_t timer) {
     //disable use of the given timer
-#if defined WIRING // Wiring
+#if defined(_useTimer1)
     if (timer == _timer1) {
-#if defined(__AVR_ATmega1281__) || defined(__AVR_ATmega2561__)
+#if defined(__AVR_ATmega8__) || defined(__AVR_ATmega128__)
+        TIMSK &= ~_BV(OCIE1A); // disable timer 1 output compare interrupt
+#else
+        // here if not ATmega8 or ATmega128
         TIMSK1 &= ~_BV(OCIE1A); // disable timer 1 output compare interrupt
-#else
-        TIMSK &= ~_BV(OCIE1A);  // disable timer 1 output compare interrupt
 #endif
+#if defined(WIRING) // Wiring
         timerDetach(TIMER1OUTCOMPAREA_INT);
-    } else if (timer == _timer3) {
-#if defined(__AVR_ATmega1281__) || defined(__AVR_ATmega2561__)
-        TIMSK3 &= ~_BV(OCIE3A); // disable the timer3 output compare A interrupt
-#else
-        ETIMSK &= ~_BV(OCIE3A); // disable the timer3 output compare A interrupt
 #endif
-        timerDetach(TIMER3OUTCOMPAREA_INT);
     }
+#endif
+
+#if defined(_useTimer3)
+    if (timer == _timer3) {
+#if defined(__AVR_ATmega128__)
+        ETIMSK &= ~_BV(OCIE3A); // disable the timer3 output compare A interrupt
 #else
-    //For arduino - in future: call here to a currently undefined function to reset the timer
-    (void)timer; // squash "unused parameter 'timer' [-Wunused-parameter]" warning
+        TIMSK3 &= ~_BV(OCIE3A); // disable the timer3 output compare A interrupt
+#endif
+#if defined(WIRING) // Wiring
+        timerDetach(TIMER3OUTCOMPAREA_INT);
+#endif
+    }
 #endif
 }
 
-static boolean isTimerActive(timer16_Sequence_t timer) {
+static inline bool isTimerRunning(timer16_Sequence_t timer) {
+
+    //disable use of the given timer
+#if defined(_useTimer1)
+    if (timer == _timer1) {
+        // check if timer 1 output compare interrupt flag is set
+#if defined(__AVR_ATmega8__) || defined(__AVR_ATmega128__)
+        return TIMSK & _BV(OCIE1A);
+#else
+        // here if not ATmega8 or ATmega128
+        return TIMSK1 & _BV(OCIE1A);
+#endif
+    }
+#endif
+
+#if defined(_useTimer3)
+    if (timer == _timer3) {
+        // check if timer 3 output compare interrupt flag is set
+#if defined(__AVR_ATmega128__)
+        return ETIMSK & _BV(OCIE3A);
+#else
+        return TIMSK3 & _BV(OCIE3A);
+#endif
+    }
+#endif
+
+    return false;
+}
+
+static inline bool isTimerUsed(timer16_Sequence_t timer) {
+    uint8_t globalIndex = SERVOS_PER_TIMER * timer;
+    uint8_t servoCountOfTimer = servoCount - globalIndex;
+    if (servoCountOfTimer > SERVOS_PER_TIMER) {
+        servoCountOfTimer = SERVOS_PER_TIMER;
+    }
     // returns true if any servo is active on this timer
-    for (uint8_t channel = 0; channel < SERVOS_PER_TIMER; channel++) {
-        if (SERVO(timer, channel).Pin.isActive == true)
+    for (uint8_t channel = 0; channel < servoCountOfTimer; ++channel) {
+        servo_t &current = servos[globalIndex++];
+        if (current.Pin.isActive && current.duration > 0)
             return true;
     }
     return false;
