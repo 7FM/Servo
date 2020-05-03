@@ -88,7 +88,7 @@
 
 #define INVALID_SERVO 255 // flag indicating an invalid servo index
 
-#if !defined(ARDUINO_ARCH_STM32F4)
+#if !defined(ARDUINO_ARCH_STM32F4) && !defined(defined(ARDUINO_ARCH_AVR))
 
 typedef struct {
     uint8_t nbr : 7;      // a pin number from 0 to 127
