@@ -73,7 +73,6 @@ typedef uint8_t MaskType;
 typedef struct {
     RegType reg;
     MaskType mask;
-    bool isActive;
 } ServoPin_t;
 
 typedef struct {

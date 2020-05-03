@@ -31,10 +31,10 @@
 
 #define TRIM_DURATION 2 // compensation ticks to trim adjust for digitalWrite delays // 12 August 2009
 
-static servo_t servos[MAX_SERVOS] = {0};             // static array of servo structures
-static volatile int8_t channel[_Nbr_16timers] = {0}; // counter for the servo being pulsed for each timer (or -1 if refresh interval)
+static servo_t servos[MAX_SERVOS] = {0};           // static array of servo structures
+static volatile bool channel[_Nbr_16timers] = {0}; // counter for the servo being pulsed for each timer (or -1 if refresh interval)
 
-static volatile uint8_t servoCount = 0; // the total number of attached servos
+static uint8_t servoCount = 0; // the total number of attached servos
 
 // convenience macros
 #define SERVO_INDEX_TO_TIMER(_servo_nbr) ((timer16_Sequence_t)(_servo_nbr / SERVOS_PER_TIMER)) // returns the timer controlling this servo
@@ -73,52 +73,76 @@ static volatile uint8_t servoCount = 0; // the total number of attached servos
 
 /************ static functions common to all instances ***********************/
 
-static inline void handle_interrupts(timer16_Sequence_t timer, volatile uint16_t *TCNTn, volatile uint16_t *OCRnA) {
-    uint8_t globalIndex = SERVOS_PER_TIMER * timer;
-    uint8_t servoCountOfTimer = servoCount - globalIndex;
-    if (servoCountOfTimer > SERVOS_PER_TIMER) {
-        servoCountOfTimer = SERVOS_PER_TIMER;
+static inline void finISR(timer16_Sequence_t timer) {
+    //disable use of the given timer
+#if defined(_useTimer1)
+    if (timer == _timer1) {
+#if defined(__AVR_ATmega8__) || defined(__AVR_ATmega128__)
+        TIMSK &= ~_BV(OCIE1A); // disable timer 1 output compare interrupt
+#else
+        // here if not ATmega8 or ATmega128
+        TIMSK1 &= ~_BV(OCIE1A); // disable timer 1 output compare interrupt
+#endif
+#if defined(WIRING) // Wiring
+        timerDetach(TIMER1OUTCOMPAREA_INT);
+#endif
     }
-    globalIndex += channel[timer];
+#endif
+
+#if defined(_useTimer3)
+    if (timer == _timer3) {
+#if defined(__AVR_ATmega128__)
+        ETIMSK &= ~_BV(OCIE3A); // disable the timer3 output compare A interrupt
+#else
+        TIMSK3 &= ~_BV(OCIE3A); // disable the timer3 output compare A interrupt
+#endif
+#if defined(WIRING) // Wiring
+        timerDetach(TIMER3OUTCOMPAREA_INT);
+#endif
+    }
+#endif
+}
+
+static inline void handle_interrupts(timer16_Sequence_t timer, volatile uint16_t *TCNTn, volatile uint16_t *OCRnA) {
+    // We can only have one servo per timer by design also the timer should not run if not active!
+    // In our case globalIndex is basically the timer id
+    const uint8_t globalIndex = timer;
+
+    // Flip state
+    channel[timer] = !channel[timer];
+
+    servo_t &current = servos[globalIndex];
 
     // increment to the next channel
-    if (channel[timer] < 0) {
+    if (channel[timer]) {
         *TCNTn = 0; // channel set to -1 indicated that refresh interval completed so reset the timer
-    } else if (channel[timer] < servoCountOfTimer) {
-        const servo_t &current = servos[globalIndex];
-        if (current.Pin.isActive) {
-            // pulse this channel low if activated
-            *current.Pin.reg &= ~current.Pin.mask;
-        }
-    }
-
-    ++channel[timer];
-    ++globalIndex;
-
-    if (channel[timer] < servoCountOfTimer) {
-        servo_t &nextServo = servos[globalIndex];
 
         // Setup the compare register to the wanted time to pulse back to low
-        *OCRnA = *TCNTn + nextServo.ticks;
+        *OCRnA = *TCNTn + current.ticks;
 
         // check if activated and has time left
-        if (nextServo.Pin.isActive && nextServo.duration > 0) {
+        if (current.duration > 0) {
             // its an active channel so pulse it high
-            *nextServo.Pin.reg |= nextServo.Pin.mask;
-            if (nextServo.duration != 0xFFFF)
-                --nextServo.duration;
+            *current.Pin.reg |= current.Pin.mask;
+            if (current.duration != 0xFFFF)
+                --current.duration;
+        } else {
+            // We have only one servo per timer so we can end this here
+            finISR(timer);
         }
     } else {
-        // start again at the first channel
-        channel[timer] = -1;
-        // finished all channels so wait for the refresh period to expire before starting over
+        // pulse this channel low if activated
+        *current.Pin.reg &= ~current.Pin.mask;
 
+        // finished all channels so wait for the refresh period to expire before starting over
         // allow a few ticks to ensure the next OCR1A won't be missed
         uint16_t ticks = *TCNTn + 4;
         if (ticks < usToTicks(REFRESH_INTERVAL)) {
             *OCRnA = (uint16_t)usToTicks(REFRESH_INTERVAL);
         } else {
             // at least REFRESH_INTERVAL has elapsed we need a interrupt ASAP
+            // THIS WOULD BE A VERY BAD CASE:
+            // when using only one servo this basically means this routine is using all runtime available!
             *OCRnA = ticks;
         }
     }
@@ -223,36 +247,6 @@ static void initISR(timer16_Sequence_t timer) {
 #endif
 }
 
-static void finISR(timer16_Sequence_t timer) {
-    //disable use of the given timer
-#if defined(_useTimer1)
-    if (timer == _timer1) {
-#if defined(__AVR_ATmega8__) || defined(__AVR_ATmega128__)
-        TIMSK &= ~_BV(OCIE1A); // disable timer 1 output compare interrupt
-#else
-        // here if not ATmega8 or ATmega128
-        TIMSK1 &= ~_BV(OCIE1A); // disable timer 1 output compare interrupt
-#endif
-#if defined(WIRING) // Wiring
-        timerDetach(TIMER1OUTCOMPAREA_INT);
-#endif
-    }
-#endif
-
-#if defined(_useTimer3)
-    if (timer == _timer3) {
-#if defined(__AVR_ATmega128__)
-        ETIMSK &= ~_BV(OCIE3A); // disable the timer3 output compare A interrupt
-#else
-        TIMSK3 &= ~_BV(OCIE3A); // disable the timer3 output compare A interrupt
-#endif
-#if defined(WIRING) // Wiring
-        timerDetach(TIMER3OUTCOMPAREA_INT);
-#endif
-    }
-#endif
-}
-
 static inline bool isTimerRunning(timer16_Sequence_t timer) {
 
     //disable use of the given timer
@@ -282,21 +276,6 @@ static inline bool isTimerRunning(timer16_Sequence_t timer) {
     return false;
 }
 
-static inline bool isTimerUsed(timer16_Sequence_t timer) {
-    uint8_t globalIndex = SERVOS_PER_TIMER * timer;
-    uint8_t servoCountOfTimer = servoCount - globalIndex;
-    if (servoCountOfTimer > SERVOS_PER_TIMER) {
-        servoCountOfTimer = SERVOS_PER_TIMER;
-    }
-    // returns true if any servo is active on this timer
-    for (uint8_t channel = 0; channel < servoCountOfTimer; ++channel) {
-        servo_t &current = servos[globalIndex++];
-        if (current.Pin.isActive && current.duration > 0)
-            return true;
-    }
-    return false;
-}
-
 /****************** end of static functions ******************************/
 
 Servo::Servo() : servoIndex(servoCount < MAX_SERVOS ? servoCount++ : INVALID_SERVO) {
@@ -316,9 +295,12 @@ uint8_t Servo::attach(uint8_t pin, uint16_t min, uint16_t max) {
         pinAsOutput(pin); // set servo pin to output
         servo.Pin.reg = portOfPin(pin);
         servo.Pin.mask = pinMask(pin);
+
+        // Ensure signal is set to LOW
+        *servo.Pin.reg &= ~servo.Pin.mask;
+
         // Ensure the servo will not be controlled before setting target value
         servo.duration = 0;
-        servo.Pin.isActive = true; // this must be set after the check for isTimerUsed
 
         this->min = min;
         this->max = max;
@@ -328,13 +310,8 @@ uint8_t Servo::attach(uint8_t pin, uint16_t min, uint16_t max) {
 
 void Servo::detach() {
     servo_t &servo = servos[this->servoIndex];
-    servo.Pin.isActive = false;
-    // Ensure signal is set to LOW
-    *servo.Pin.reg &= ~servo.Pin.mask;
-    timer16_Sequence_t timer = SERVO_INDEX_TO_TIMER(servoIndex);
-    if (!isTimerUsed(timer)) {
-        finISR(timer);
-    }
+    // Setting duration to 0 should be enough because the ISR disables itself and leaves the pin low: nice!
+    servo.duration = 0;
 }
 
 void Servo::write(uint16_t value, uint16_t duration) {
@@ -387,7 +364,7 @@ uint16_t Servo::readMicroseconds() {
 }
 
 bool Servo::attached() {
-    return servos[this->servoIndex].Pin.isActive;
+    return this->servoIndex != INVALID_SERVO;
 }
 
 #endif // ARDUINO_ARCH_AVR
