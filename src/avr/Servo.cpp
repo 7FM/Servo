@@ -316,6 +316,10 @@ uint8_t Servo::attach(uint8_t pin, uint16_t min, uint16_t max) {
         pinAsOutput(pin); // set servo pin to output
         servo.Pin.reg = portOfPin(pin);
         servo.Pin.mask = pinMask(pin);
+
+        // Ensure the pin is set to low
+        *servo.Pin.reg &= ~servo.Pin.mask;
+
         // Ensure the servo will not be controlled before setting target value
         servo.duration = 0;
         servo.Pin.isActive = true; // this must be set after the check for isTimerUsed
