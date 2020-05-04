@@ -67,7 +67,7 @@ typedef enum { _timer1,
                _Nbr_16timers } timer16_Sequence_t;
 #endif
 
-typedef volatile uint8_t* RegType;
+typedef volatile uint8_t *RegType;
 typedef uint8_t MaskType;
 
 typedef struct {
@@ -89,9 +89,9 @@ class Servo {
     void detach();
     void write(uint16_t value, uint16_t duration = 0);             // if value is < the minimum pulse width it's treated as an angle, otherwise as pulse width in microseconds
     void writeMicroseconds(uint16_t value, uint16_t duration = 0); // Write pulse width in microseconds and keep sending the signal for a given duration(milliseconds) or forever
-    inline uint8_t read();                                         // returns current pulse width as an angle between 0 and 180 degrees
+    uint8_t read();                                                // returns current pulse width as an angle between 0 and 180 degrees
     uint16_t readMicroseconds();                                   // returns current pulse width in microseconds for this servo (was read_us() in first release)
-    inline bool attached();                                        // return true if this servo is attached, otherwise false
+    bool attached();                                               // return true if this servo is attached, otherwise false
   private:
     const uint8_t servoIndex; // index into the channel data for this servo
     uint16_t min;             // minimum pulse width in microseconds
