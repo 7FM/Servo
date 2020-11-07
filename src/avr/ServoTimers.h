@@ -92,7 +92,7 @@ class Servo {
     void writeMicroseconds(uint16_t value, uint16_t duration = 0); // Write pulse width in microseconds and keep sending the signal for a given duration(milliseconds) or forever
     inline uint8_t read();                                         // returns current pulse width as an angle between 0 and 180 degrees
     uint16_t readMicroseconds();                                   // returns current pulse width in microseconds for this servo (was read_us() in first release)
-    inline bool attached();                                        // return true if this servo is attached, otherwise false
+    bool attached();                                               // return true if this servo is attached, otherwise false
   private:
     const uint8_t servoIndex; // index into the channel data for this servo
     uint16_t min;             // minimum pulse width in microseconds
