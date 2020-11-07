@@ -67,7 +67,7 @@ typedef enum { _timer1,
                _Nbr_16timers } timer16_Sequence_t;
 #endif
 
-typedef volatile uint8_t* RegType;
+typedef volatile uint8_t *RegType;
 typedef uint8_t MaskType;
 
 typedef struct {
